@@ -2,22 +2,27 @@ use crate::utils;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-pub fn run() {
-  let contents = include_str!("../data/day4.txt");
+fn prepare_input(contents: &str) -> HashMap<u32, HashMap<u8, u32>> {
   let mut entries: Vec<Entry> = contents.lines().map(|l| Entry::new(l)).collect();
   entries.sort();
-  println!("day 4 part 1: {}", part1(&entries));
-  println!("day 4 part 2: {}", part2(&entries));
+  guard_to_minute_map(&entries)
 }
 
-#[derive(PartialEq, Eq, Debug)]
+pub fn run() {
+  let contents = include_str!("../data/day4.txt");
+  let guard_id_to_minutes = prepare_input(contents);
+  println!("day 4 part 1: {}", part1(&guard_id_to_minutes));
+  println!("day 4 part 2: {}", part2(&guard_id_to_minutes));
+}
+
+#[derive(PartialEq, Eq, Debug, PartialOrd)]
 enum EntryKind {
   Guard(u32),
   Sleep,
   Wake,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, PartialOrd)]
 struct Entry {
   time: Time,
   kind: EntryKind,
@@ -73,9 +78,6 @@ impl TimeSpan {
 impl Iterator for TimeSpan {
   type Item = Time;
   fn next(&mut self) -> Option<Time> {
-    if self.start.minutes > self.end.minutes {
-      panic!("uh oh");
-    }
     if self.start.minutes == self.end.minutes {
       None
     } else {
@@ -96,18 +98,7 @@ struct Time {
 }
 
 impl Time {
-  fn total(&self) -> u32 {
-    (self.day as u32) * 1440 + (self.hours as u32) * 60 + self.minutes as u32
-  }
-
-  fn minutes_since(&self, o: &Self) -> Option<u32> {
-    match self.cmp(&o) {
-      Ordering::Equal => Some(0),
-      Ordering::Less => None,
-      Ordering::Greater => Some(self.total() - o.total()),
-    }
-  }
-  fn since(&self, o: &Self) -> Option<TimeSpan> {
+  fn until(&self, o: &Self) -> Option<TimeSpan> {
     match self.cmp(&o) {
       Ordering::Greater => None,
       _ => Some(TimeSpan::from(self, o)),
@@ -118,11 +109,6 @@ impl Time {
 impl Ord for Entry {
   fn cmp(&self, o: &Self) -> Ordering {
     self.time.cmp(&o.time)
-  }
-}
-impl PartialOrd for Entry {
-  fn partial_cmp(&self, o: &Self) -> Option<Ordering> {
-    Some(self.cmp(o))
   }
 }
 
@@ -143,49 +129,7 @@ impl PartialOrd for Time {
   }
 }
 
-fn part1(entries: &Vec<Entry>) -> u32 {
-  let mut sleep_minutes: HashMap<u32, u32> = HashMap::new();
-  let mut cur_guard_id: u32 = match entries.first() {
-    Some(Entry {
-      kind: EntryKind::Guard(guard_id),
-      ..
-    }) => *guard_id,
-    _ => panic!("First entry should be a guard"),
-  };
-
-  let mut cur_time = match entries.first() {
-    Some(Entry { time, .. }) => time,
-    _ => panic!("No minutes in first entry"),
-  };
-
-  for entry in entries.iter().skip(1) {
-    match entry.kind {
-      EntryKind::Guard(id) => cur_guard_id = id,
-      EntryKind::Sleep => {
-        cur_time = &entry.time;
-      }
-      EntryKind::Wake => match entry.time.minutes_since(cur_time) {
-        Some(v) => {
-          let entry = sleep_minutes.entry(cur_guard_id).or_default();
-          *entry += v;
-        }
-        None => panic!("Wrong time"),
-      },
-    }
-  }
-
-  let mut max_guard_id = 0;
-  let mut max_minutes = 0;
-  for (guard_id, minutes) in sleep_minutes {
-    if minutes > max_minutes {
-      max_guard_id = guard_id;
-      max_minutes = minutes;
-    }
-  }
-  max_guard_id * most_common_minute_for(max_guard_id, entries) as u32
-}
-
-fn part2(entries: &Vec<Entry>) -> u32 {
+fn guard_to_minute_map(entries: &Vec<Entry>) -> HashMap<u32, HashMap<u8, u32>> {
   let mut guard_id_to_minutes: HashMap<u32, HashMap<u8, u32>> = HashMap::new();
   let mut cur_guard_id: u32 = match entries.first() {
     Some(Entry {
@@ -210,19 +154,46 @@ fn part2(entries: &Vec<Entry>) -> u32 {
         let minutes_map = guard_id_to_minutes
           .entry(cur_guard_id)
           .or_insert_with(|| HashMap::new());
-        for time in cur_time.since(&entry.time).unwrap() {
+        for time in cur_time.until(&entry.time).unwrap() {
           let minutes_entry = minutes_map.entry(time.minutes).or_default();
           *minutes_entry += 1;
         }
       }
     }
   }
+  guard_id_to_minutes
+}
 
+fn part1(guard_id_to_minutes: &HashMap<u32, HashMap<u8, u32>>) -> u32 {
+  let mut max_total = 0;
+  let mut max_guard_id = 0;
+  for (guard_id, minutes_map) in guard_id_to_minutes {
+    let total: u32 = minutes_map.values().sum();
+    if total > max_total {
+      max_total = total;
+      max_guard_id = *guard_id;
+    }
+  }
+
+  let max_minute_map = guard_id_to_minutes.get(&max_guard_id).unwrap();
+  let mut max_count = 0;
+  let mut max_minute = 0;
+  for (&minute, &count) in max_minute_map {
+    if count > max_count {
+      max_count = count;
+      max_minute = minute;
+    }
+  }
+
+  max_guard_id * max_minute as u32
+}
+
+fn part2(guard_id_to_minutes: &HashMap<u32, HashMap<u8, u32>>) -> u32 {
   let mut max_count = 0;
   let mut max_minute = 0;
   let mut max_guard_id = 0;
-  for (guard_id, minutes_map) in guard_id_to_minutes {
-    for (minute, count) in minutes_map {
+  for (&guard_id, minutes_map) in guard_id_to_minutes {
+    for (&minute, &count) in minutes_map {
       if count > max_count {
         max_count = count;
         max_minute = minute;
@@ -234,44 +205,6 @@ fn part2(entries: &Vec<Entry>) -> u32 {
   max_guard_id * max_minute as u32
 }
 
-fn most_common_minute_for(guard_id: u32, entries: &Vec<Entry>) -> u8 {
-  let mut minutes = HashMap::<u8, u32>::new();
-
-  let mut cur_time = None;
-  let mut active = false;
-  for entry in entries {
-    match (active, &entry.kind) {
-      (_, EntryKind::Guard(id)) if guard_id == *id => {
-        active = true;
-      }
-      (_, EntryKind::Guard(_)) => {
-        active = false;
-      }
-      (true, EntryKind::Sleep) => {
-        cur_time = Some(entry.time.clone());
-      }
-      (true, EntryKind::Wake) => {
-        let start = cur_time.clone().unwrap();
-        let span = start.since(&entry.time).unwrap();
-        for time in span {
-          let entry = minutes.entry(time.minutes).or_default();
-          *entry += 1;
-        }
-      }
-      _ => {}
-    }
-  }
-  let mut max_minute = 0;
-  let mut max_count = 0;
-  for (minute, count) in minutes {
-    if count > max_count {
-      max_count = count;
-      max_minute = minute;
-    }
-  }
-  max_minute
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -279,18 +212,14 @@ mod tests {
   #[test]
   fn example1() {
     let contents = include_str!("../data/day4-example.txt");
-    let mut entries: Vec<Entry> = contents.lines().map(|l| Entry::new(l)).collect();
-    entries.sort();
-
-    assert_eq!(part1(&entries), 240);
+    let map = prepare_input(contents);
+    assert_eq!(part1(&map), 240);
   }
 
   #[test]
   fn example2() {
     let contents = include_str!("../data/day4-example.txt");
-    let mut entries: Vec<Entry> = contents.lines().map(|l| Entry::new(l)).collect();
-    entries.sort();
-
-    assert_eq!(part2(&entries), 4455);
+    let map = prepare_input(contents);
+    assert_eq!(part2(&map), 4455);
   }
 }
