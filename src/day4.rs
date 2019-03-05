@@ -7,6 +7,7 @@ pub fn run() {
   let mut entries: Vec<Entry> = contents.lines().map(|l| Entry::new(l)).collect();
   entries.sort();
   println!("day 4 part 1: {}", part1(&entries));
+  println!("day 4 part 2: {}", part2(&entries));
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -184,6 +185,55 @@ fn part1(entries: &Vec<Entry>) -> u32 {
   max_guard_id * most_common_minute_for(max_guard_id, entries) as u32
 }
 
+fn part2(entries: &Vec<Entry>) -> u32 {
+  let mut guard_id_to_minutes: HashMap<u32, HashMap<u8, u32>> = HashMap::new();
+  let mut cur_guard_id: u32 = match entries.first() {
+    Some(Entry {
+      kind: EntryKind::Guard(guard_id),
+      ..
+    }) => *guard_id,
+    _ => panic!("First entry should be a guard"),
+  };
+
+  let mut cur_time = match entries.first() {
+    Some(Entry { time, .. }) => time,
+    _ => panic!("No minutes in first entry"),
+  };
+
+  for entry in entries.iter().skip(1) {
+    match entry.kind {
+      EntryKind::Guard(id) => cur_guard_id = id,
+      EntryKind::Sleep => {
+        cur_time = &entry.time;
+      }
+      EntryKind::Wake => {
+        let minutes_map = guard_id_to_minutes
+          .entry(cur_guard_id)
+          .or_insert_with(|| HashMap::new());
+        for time in cur_time.since(&entry.time).unwrap() {
+          let minutes_entry = minutes_map.entry(time.minutes).or_default();
+          *minutes_entry += 1;
+        }
+      }
+    }
+  }
+
+  let mut max_count = 0;
+  let mut max_minute = 0;
+  let mut max_guard_id = 0;
+  for (guard_id, minutes_map) in guard_id_to_minutes {
+    for (minute, count) in minutes_map {
+      if count > max_count {
+        max_count = count;
+        max_minute = minute;
+        max_guard_id = guard_id;
+      }
+    }
+  }
+
+  max_guard_id * max_minute as u32
+}
+
 fn most_common_minute_for(guard_id: u32, entries: &Vec<Entry>) -> u8 {
   let mut minutes = HashMap::<u8, u32>::new();
 
@@ -233,5 +283,14 @@ mod tests {
     entries.sort();
 
     assert_eq!(part1(&entries), 240);
+  }
+
+  #[test]
+  fn example2() {
+    let contents = include_str!("../data/day4-example.txt");
+    let mut entries: Vec<Entry> = contents.lines().map(|l| Entry::new(l)).collect();
+    entries.sort();
+
+    assert_eq!(part2(&entries), 4455);
   }
 }
