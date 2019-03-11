@@ -31,6 +31,13 @@ pub fn scan_ints(s: &str) -> Vec<i32> {
   result
 }
 
+pub fn time<F: FnOnce() -> ()>(desc: &str, closure: F) {
+  use std::time::Instant;
+  let now = Instant::now();
+  closure();
+  println!("Ran {} in {:?}", desc, Instant::now().duration_since(now));
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
