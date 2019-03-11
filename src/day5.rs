@@ -1,4 +1,4 @@
-fn prepare_input<'a>(c: &'a str) -> &'a str {
+fn prepare_input(c: &str) -> &str {
   c.trim()
 }
 

@@ -129,7 +129,7 @@ impl PartialOrd for Time {
   }
 }
 
-fn guard_to_minute_map(entries: &Vec<Entry>) -> HashMap<u32, HashMap<u8, u32>> {
+fn guard_to_minute_map(entries: &[Entry]) -> HashMap<u32, HashMap<u8, u32>> {
   let mut guard_id_to_minutes: HashMap<u32, HashMap<u8, u32>> = HashMap::new();
   let mut cur_guard_id: u32 = match entries.first() {
     Some(Entry {
@@ -153,7 +153,7 @@ fn guard_to_minute_map(entries: &Vec<Entry>) -> HashMap<u32, HashMap<u8, u32>> {
       EntryKind::Wake => {
         let minutes_map = guard_id_to_minutes
           .entry(cur_guard_id)
-          .or_insert_with(|| HashMap::new());
+          .or_insert_with(HashMap::new);
         for time in cur_time.until(&entry.time).unwrap() {
           let minutes_entry = minutes_map.entry(time.minutes).or_default();
           *minutes_entry += 1;
@@ -185,7 +185,7 @@ fn part1(guard_id_to_minutes: &HashMap<u32, HashMap<u8, u32>>) -> u32 {
     }
   }
 
-  max_guard_id * max_minute as u32
+  max_guard_id * u32::from(max_minute)
 }
 
 fn part2(guard_id_to_minutes: &HashMap<u32, HashMap<u8, u32>>) -> u32 {
@@ -202,7 +202,7 @@ fn part2(guard_id_to_minutes: &HashMap<u32, HashMap<u8, u32>>) -> u32 {
     }
   }
 
-  max_guard_id * max_minute as u32
+  max_guard_id * u32::from(max_minute)
 }
 
 #[cfg(test)]

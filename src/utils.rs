@@ -25,7 +25,7 @@ pub fn scan_ints(s: &str) -> Vec<i32> {
       _ => continue,
     }
   }
-  if digit_chars.len() > 0 {
+  if !digit_chars.is_empty() {
     result.push(digit_chars.parse().unwrap());
   }
   result

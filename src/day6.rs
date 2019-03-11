@@ -17,7 +17,7 @@ pub fn run() {
   println!("day 6 part 2: {}", part2(&points));
 }
 
-fn get_bounds(points: &Vec<Point2>) -> (u32, u32, u32, u32) {
+fn get_bounds(points: &[Point2]) -> (u32, u32, u32, u32) {
   let xmin = points.iter().min_by_key(|p| p.x).unwrap().x;
   let xmax = points.iter().max_by_key(|p| p.x).unwrap().x;
   let ymin = points.iter().min_by_key(|p| p.y).unwrap().y;
@@ -25,7 +25,7 @@ fn get_bounds(points: &Vec<Point2>) -> (u32, u32, u32, u32) {
   (xmin, xmax, ymin, ymax)
 }
 
-fn part1(points: &Vec<Point2>) -> u32 {
+fn part1(points: &[Point2]) -> u32 {
   let (xmin, xmax, ymin, ymax) = get_bounds(points);
 
   // keep track of total owned squares for each point
@@ -76,7 +76,7 @@ fn part1(points: &Vec<Point2>) -> u32 {
   max_area
 }
 
-fn total_distance(x: u32, y: u32, points: &Vec<Point2>) -> u32 {
+fn total_distance(x: u32, y: u32, points: &[Point2]) -> u32 {
   let mut total = 0;
   let cur = Point2::new(x, y);
   for point in points {
@@ -85,7 +85,7 @@ fn total_distance(x: u32, y: u32, points: &Vec<Point2>) -> u32 {
   total
 }
 
-fn part2(points: &Vec<Point2>) -> u32 {
+fn part2(points: &[Point2]) -> u32 {
   const MIN_REGION_DIST: u32 = 10000;
   let (xmin, xmax, ymin, ymax) = get_bounds(points);
   let mut sum = 0;

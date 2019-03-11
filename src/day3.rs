@@ -13,6 +13,7 @@ impl Claim {
   fn new(s: &str) -> Claim {
     let ints = utils::scan_ints(s);
     if ints.len() != 5 {
+      println!("{:?}", ints);
       panic!("Wrong ints");
     }
     Claim {
@@ -61,7 +62,7 @@ enum ClaimCount {
   Intersect,
 }
 
-fn part1(claims: &Vec<Claim>) -> usize {
+fn part1(claims: &[Claim]) -> usize {
   let mut grid = HashMap::<(u32, u32), ClaimCount>::new();
 
   for claim in claims {
@@ -83,7 +84,7 @@ fn part1(claims: &Vec<Claim>) -> usize {
     .count()
 }
 
-fn part2(claims: &Vec<Claim>) -> Option<u32> {
+fn part2(claims: &[Claim]) -> Option<u32> {
   for claim in claims {
     let mut intersects = false;
     for other in claims {
@@ -112,7 +113,7 @@ mod tests {
 #1 @ 1,3: 4x4
 #2 @ 3,1: 4x4
 #3 @ 5,5: 2x2";
-    let claims = contents.lines().map(|l| Claim::new(l)).collect();
+    let claims: Vec<Claim> = contents.lines().map(|l| Claim::new(l)).collect();
     assert_eq!(part1(&claims), 4);
   }
 
